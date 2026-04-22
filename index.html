@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bíblia Mobile</title>
+
+<style>
+body { margin:0; font-family:Arial; background:#f0f0f0; }
+header { background:#2c3e50; color:white; padding:15px; text-align:center; }
+.container { padding:10px; }
+
+button {
+    width:100%;
+    padding:15px;
+    margin:5px 0;
+    border:none;
+    border-radius:8px;
+    background:#3498db;
+    color:white;
+    font-size:16px;
+}
+
+.back { background:#e74c3c; }
+.content { display:none; }
+
+.verse {
+    background:white;
+    padding:10px;
+    margin:5px 0;
+    border-radius:8px;
+}
+</style>
+</head>
+
+<body>
+
+<header id="title">Bíblia Sagrada</header>
+
+<div class="container">
+
+    <!-- MENU VERSÃO -->
+    <div id="menuVersao">
+        <button onclick="carregar('acf.json')">ACF</button>
+        <button onclick="carregar('aa.json')">AA</button>
+        <button onclick="carregar('nvi.json')">NVI</button>
+    </div>
+
+    <!-- TESTAMENTO -->
+    <div id="menuTestamento" class="content">
+        <button onclick="abrirTestamento('antigo')">Antigo Testamento</button>
+        <button onclick="abrirTestamento('novo')">Novo Testamento</button>
+    </div>
+
+    <!-- LIVROS -->
+    <div id="menuLivros" class="content"></div>
+
+    <!-- CAPÍTULOS -->
+    <div id="menuCapitulos" class="content"></div>
+
+    <!-- LEITURA -->
+    <div id="leitura" class="content"></div>
+
+</div>
+
+<script>
+
+let biblia = [];
+let livroAtual = null;
+let indiceLivroAtual = 0;
+
+// 📥 carregar JSON
+async function carregar(arq) {
+    try {
+        let res = await fetch(arq);
+        biblia = await res.json();
+
+        console.log("Primeiro livro:", biblia[0]);
+
+        esconderTudo();
+        document.getElementById("menuTestamento").style.display = "block";
+        document.getElementById("title").innerText = "Escolha o Testamento";
+
+    } catch (e) {
+        alert("Erro ao carregar JSON");
+        console.error(e);
+    }
+}
+
+// 🔥 pega nome independente do formato
+function nomeLivro(livro) {
+    return livro.book || livro.name || "Sem nome";
+}
+
+// 🔹 abrir testamento (CORRETO)
+function abrirTestamento(tipo) {
+    esconderTudo();
+
+    let div = document.getElementById("menuLivros");
+    div.innerHTML = `<button class="back" onclick="voltarVersao()">Voltar</button>`;
+
+    biblia.forEach((livro, index) => {
+
+        let ehAntigo = index < 39;
+
+        if ((tipo === "antigo" && ehAntigo) ||
+            (tipo === "novo" && !ehAntigo)) {
+
+            div.innerHTML += `<button onclick="abrirCapitulos(${index})">${nomeLivro(livro)}</button>`;
+        }
+    });
+
+    div.style.display = "block";
+    document.getElementById("title").innerText = tipo === "antigo" ? "Antigo Testamento" : "Novo Testamento";
+}
+
+// 📖 abrir capítulos
+function abrirCapitulos(index) {
+    esconderTudo();
+
+    livroAtual = biblia[index];
+    indiceLivroAtual = index;
+
+    let div = document.getElementById("menuCapitulos");
+    div.innerHTML = `<button class="back" onclick="voltarTestamento()">Voltar</button>`;
+
+    livroAtual.chapters.forEach((_, i) => {
+        div.innerHTML += `<button onclick="lerCapitulo(${i})">Capítulo ${i + 1}</button>`;
+    });
+
+    div.style.display = "block";
+    document.getElementById("title").innerText = nomeLivro(livroAtual);
+}
+
+// 📜 leitura
+function lerCapitulo(cap) {
+    esconderTudo();
+
+    let div = document.getElementById("leitura");
+    div.innerHTML = `<button class="back" onclick="abrirCapitulos(${indiceLivroAtual})">Voltar</button>`;
+    div.innerHTML += `<h2>${nomeLivro(livroAtual)} ${cap + 1}</h2>`;
+
+    livroAtual.chapters[cap].forEach((v, i) => {
+        div.innerHTML += `<div class="verse"><b>${i + 1}</b> ${v}</div>`;
+    });
+
+    div.style.display = "block";
+}
+
+// 🔙 voltar
+function voltarVersao() {
+    esconderTudo();
+    document.getElementById("menuVersao").style.display = "block";
+    document.getElementById("title").innerText = "Bíblia Sagrada";
+}
+
+function voltarTestamento() {
+    esconderTudo();
+    document.getElementById("menuTestamento").style.display = "block";
+    document.getElementById("title").innerText = "Escolha o Testamento";
+}
+
+// util
+function esconderTudo() {
+    document.getElementById("menuVersao").style.display = "none";
+    document.getElementById("menuTestamento").style.display = "none";
+    document.getElementById("menuLivros").style.display = "none";
+    document.getElementById("menuCapitulos").style.display = "none";
+    document.getElementById("leitura").style.display = "none";
+}
+
+</script>
+
+</body>
+</html>

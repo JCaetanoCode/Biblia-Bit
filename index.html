@@ -29,6 +29,14 @@ button {
     padding:10px;
     margin:5px 0;
     border-radius:8px;
+    cursor:pointer;
+}
+
+input {
+    width:100%;
+    padding:12px;
+    border-radius:8px;
+    border:1px solid #ccc;
 }
 </style>
 </head>
@@ -37,17 +45,25 @@ button {
 
 <header id="title">Bíblia Sagrada</header>
 
+<!-- 🔎 BUSCA -->
+<div style="padding:10px;">
+    <input id="buscaInput" placeholder="Buscar na Bíblia...">
+    <button onclick="buscar()" style="margin-top:5px;">Buscar</button>
+</div>
+
 <div class="container">
 
     <!-- MENU VERSÃO -->
     <div id="menuVersao">
-        <button onclick="carregar('acf.json')">ACF</button>
-        <button onclick="carregar('aa.json')">AA</button>
-        <button onclick="carregar('nvi.json')">NVI</button>
+        <button onclick="carregar('acf.json')">Almeida Corrigida e Fiel (ACF)</button>
+        <button onclick="carregar('aa.json')">Almeida Atualizada (AA)</button>
+        <button onclick="carregar('nvi.json')">Nova Versão Internacional NVI</button>
     </div>
 
     <!-- TESTAMENTO -->
     <div id="menuTestamento" class="content">
+        <button class="back" onclick="voltarVersao()">⬅ Voltar para versões</button>
+
         <button onclick="abrirTestamento('antigo')">Antigo Testamento</button>
         <button onclick="abrirTestamento('novo')">Novo Testamento</button>
     </div>
@@ -60,6 +76,9 @@ button {
 
     <!-- LEITURA -->
     <div id="leitura" class="content"></div>
+
+    <!-- RESULTADO BUSCA -->
+    <div id="resultadoBusca" class="content"></div>
 
 </div>
 
@@ -75,8 +94,6 @@ async function carregar(arq) {
         let res = await fetch(arq);
         biblia = await res.json();
 
-        console.log("Primeiro livro:", biblia[0]);
-
         esconderTudo();
         document.getElementById("menuTestamento").style.display = "block";
         document.getElementById("title").innerText = "Escolha o Testamento";
@@ -87,20 +104,19 @@ async function carregar(arq) {
     }
 }
 
-// 🔥 pega nome independente do formato
+// 🔥 nome do livro compatível
 function nomeLivro(livro) {
     return livro.book || livro.name || "Sem nome";
 }
 
-// 🔹 abrir testamento (CORRETO)
+// 🔹 abrir testamento
 function abrirTestamento(tipo) {
     esconderTudo();
 
     let div = document.getElementById("menuLivros");
-    div.innerHTML = `<button class="back" onclick="voltarVersao()">Voltar</button>`;
+    div.innerHTML = `<button class="back" onclick="voltarTestamento()">⬅ Voltar</button>`;
 
     biblia.forEach((livro, index) => {
-
         let ehAntigo = index < 39;
 
         if ((tipo === "antigo" && ehAntigo) ||
@@ -114,7 +130,7 @@ function abrirTestamento(tipo) {
     document.getElementById("title").innerText = tipo === "antigo" ? "Antigo Testamento" : "Novo Testamento";
 }
 
-// 📖 abrir capítulos
+// 📖 capítulos
 function abrirCapitulos(index) {
     esconderTudo();
 
@@ -122,7 +138,7 @@ function abrirCapitulos(index) {
     indiceLivroAtual = index;
 
     let div = document.getElementById("menuCapitulos");
-    div.innerHTML = `<button class="back" onclick="voltarTestamento()">Voltar</button>`;
+    div.innerHTML = `<button class="back" onclick="voltarLivros()">⬅ Voltar</button>`;
 
     livroAtual.chapters.forEach((_, i) => {
         div.innerHTML += `<button onclick="lerCapitulo(${i})">Capítulo ${i + 1}</button>`;
@@ -137,7 +153,7 @@ function lerCapitulo(cap) {
     esconderTudo();
 
     let div = document.getElementById("leitura");
-    div.innerHTML = `<button class="back" onclick="abrirCapitulos(${indiceLivroAtual})">Voltar</button>`;
+    div.innerHTML = `<button class="back" onclick="abrirCapitulos(${indiceLivroAtual})">⬅ Voltar</button>`;
     div.innerHTML += `<h2>${nomeLivro(livroAtual)} ${cap + 1}</h2>`;
 
     livroAtual.chapters[cap].forEach((v, i) => {
@@ -147,7 +163,59 @@ function lerCapitulo(cap) {
     div.style.display = "block";
 }
 
-// 🔙 voltar
+// 🔎 busca
+function buscar() {
+    let termo = document.getElementById("buscaInput").value.toLowerCase().trim();
+
+    if (!termo) {
+        alert("Digite algo para buscar");
+        return;
+    }
+
+    esconderTudo();
+
+    let div = document.getElementById("resultadoBusca");
+    div.innerHTML = `<button class="back" onclick="voltarVersao()">⬅ Voltar</button>`;
+    div.innerHTML += `<h2>Resultados para: "${termo}"</h2>`;
+
+    let resultados = 0;
+
+    biblia.forEach((livro, iLivro) => {
+        let nome = nomeLivro(livro);
+
+        livro.chapters.forEach((cap, iCap) => {
+            cap.forEach((verso, iVerso) => {
+
+                if (verso.toLowerCase().includes(termo)) {
+                    resultados++;
+
+                    div.innerHTML += `
+                        <div class="verse" onclick="abrirVersiculo(${iLivro}, ${iCap})">
+                            <b>${nome} ${iCap+1}:${iVerso+1}</b><br>
+                            ${verso}
+                        </div>
+                    `;
+                }
+
+            });
+        });
+    });
+
+    if (resultados === 0) {
+        div.innerHTML += "<p>Nenhum resultado encontrado</p>";
+    }
+
+    div.style.display = "block";
+}
+
+// abrir resultado
+function abrirVersiculo(iLivro, iCap) {
+    livroAtual = biblia[iLivro];
+    indiceLivroAtual = iLivro;
+    lerCapitulo(iCap);
+}
+
+// 🔙 navegação
 function voltarVersao() {
     esconderTudo();
     document.getElementById("menuVersao").style.display = "block";
@@ -160,6 +228,11 @@ function voltarTestamento() {
     document.getElementById("title").innerText = "Escolha o Testamento";
 }
 
+function voltarLivros() {
+    esconderTudo();
+    document.getElementById("menuLivros").style.display = "block";
+}
+
 // util
 function esconderTudo() {
     document.getElementById("menuVersao").style.display = "none";
@@ -167,6 +240,7 @@ function esconderTudo() {
     document.getElementById("menuLivros").style.display = "none";
     document.getElementById("menuCapitulos").style.display = "none";
     document.getElementById("leitura").style.display = "none";
+    document.getElementById("resultadoBusca").style.display = "none";
 }
 
 </script>

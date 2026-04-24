@@ -1,0 +1,158 @@
+let biblia = [];
+let livroAtual = null;
+let indiceLivroAtual = 0;
+
+// 📥 carregar JSON
+async function carregar(arq) {
+    try {
+        let res = await fetch(arq);
+        biblia = await res.json();
+
+        esconderTudo();
+        document.getElementById("menuTestamento").style.display = "block";
+        document.getElementById("title").innerText = "Escolha o Testamento";
+
+    } catch (e) {
+        alert("Erro ao carregar JSON");
+        console.error(e);
+    }
+}
+
+// 🔥 nome do livro compatível
+function nomeLivro(livro) {
+    return livro.book || livro.name || "Sem nome";
+}
+
+// 🔹 abrir testamento
+function abrirTestamento(tipo) {
+    esconderTudo();
+
+    let div = document.getElementById("menuLivros");
+    div.innerHTML = `<button class="back" onclick="voltarTestamento()">⬅ Voltar</button>`;
+
+    biblia.forEach((livro, index) => {
+        let ehAntigo = index < 39;
+
+        if ((tipo === "antigo" && ehAntigo) ||
+            (tipo === "novo" && !ehAntigo)) {
+
+            div.innerHTML += `<button onclick="abrirCapitulos(${index})">${nomeLivro(livro)}</button>`;
+        }
+    });
+
+    div.style.display = "block";
+    document.getElementById("title").innerText = tipo === "antigo" ? "Antigo Testamento" : "Novo Testamento";
+}
+
+// 📖 capítulos
+function abrirCapitulos(index) {
+    esconderTudo();
+
+    livroAtual = biblia[index];
+    indiceLivroAtual = index;
+
+    let div = document.getElementById("menuCapitulos");
+    div.innerHTML = `<button class="back" onclick="voltarLivros()">⬅ Voltar</button>`;
+
+    livroAtual.chapters.forEach((_, i) => {
+        div.innerHTML += `<button onclick="lerCapitulo(${i})">Capítulo ${i + 1}</button>`;
+    });
+
+    div.style.display = "block";
+    document.getElementById("title").innerText = nomeLivro(livroAtual);
+}
+
+// 📜 leitura
+function lerCapitulo(cap) {
+    esconderTudo();
+
+    let div = document.getElementById("leitura");
+    div.innerHTML = `<button class="back" onclick="abrirCapitulos(${indiceLivroAtual})">⬅ Voltar</button>`;
+    div.innerHTML += `<h2>${nomeLivro(livroAtual)} ${cap + 1}</h2>`;
+
+    livroAtual.chapters[cap].forEach((v, i) => {
+        div.innerHTML += `<div class="verse"><b>${i + 1}</b> ${v}</div>`;
+    });
+
+    div.style.display = "block";
+}
+
+// 🔎 busca
+function buscar() {
+    let termo = document.getElementById("buscaInput").value.toLowerCase().trim();
+
+    if (!termo) {
+        alert("Digite algo para buscar");
+        return;
+    }
+
+    esconderTudo();
+
+    let div = document.getElementById("resultadoBusca");
+    div.innerHTML = `<button class="back" onclick="voltarVersao()">⬅ Voltar</button>`;
+    div.innerHTML += `<h2>Resultados para: "${termo}"</h2>`;
+
+    let resultados = 0;
+
+    biblia.forEach((livro, iLivro) => {
+        let nome = nomeLivro(livro);
+
+        livro.chapters.forEach((cap, iCap) => {
+            cap.forEach((verso, iVerso) => {
+
+                if (verso.toLowerCase().includes(termo)) {
+                    resultados++;
+
+                    div.innerHTML += `
+                        <div class="verse" onclick="abrirVersiculo(${iLivro}, ${iCap})">
+                            <b>${nome} ${iCap+1}:${iVerso+1}</b><br>
+                            ${verso}
+                        </div>
+                    `;
+                }
+
+            });
+        });
+    });
+
+    if (resultados === 0) {
+        div.innerHTML += "<p>Nenhum resultado encontrado</p>";
+    }
+
+    div.style.display = "block";
+}
+
+// abrir resultado
+function abrirVersiculo(iLivro, iCap) {
+    livroAtual = biblia[iLivro];
+    indiceLivroAtual = iLivro;
+    lerCapitulo(iCap);
+}
+
+// 🔙 navegação
+function voltarVersao() {
+    esconderTudo();
+    document.getElementById("menuVersao").style.display = "block";
+    document.getElementById("title").innerText = "Bíblia Sagrada";
+}
+
+function voltarTestamento() {
+    esconderTudo();
+    document.getElementById("menuTestamento").style.display = "block";
+    document.getElementById("title").innerText = "Escolha o Testamento";
+}
+
+function voltarLivros() {
+    esconderTudo();
+    document.getElementById("menuLivros").style.display = "block";
+}
+
+// util
+function esconderTudo() {
+    document.getElementById("menuVersao").style.display = "none";
+    document.getElementById("menuTestamento").style.display = "none";
+    document.getElementById("menuLivros").style.display = "none";
+    document.getElementById("menuCapitulos").style.display = "none";
+    document.getElementById("leitura").style.display = "none";
+    document.getElementById("resultadoBusca").style.display = "none";
+}
